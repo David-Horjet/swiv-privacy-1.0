@@ -9,7 +9,7 @@ pub mod utils;
 
 use instructions::*;
 
-declare_id!("8T1csV1bwt73D3wbUANo6F2gduKa8ugVv5oqrNoM2H7b");
+declare_id!("3RpaT6ZyhUPzbARNFMvPycvdWBv2ixBe6MiggSAGuBx7");
 
 #[program]
 pub mod swiv_privacy {
