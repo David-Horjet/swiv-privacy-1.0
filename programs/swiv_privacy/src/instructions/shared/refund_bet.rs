@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
-use crate::state::{UserBet, LiquidityVault, FixedMarket, MarketType, GlobalConfig, BetStatus};
-use crate::constants::{SEED_VAULT, SEED_FIXED_MARKET, SEED_GLOBAL_CONFIG};
+use crate::state::{UserBet, GlobalConfig, BetStatus};
+use crate::constants::{SEED_FIXED_MARKET, SEED_GLOBAL_CONFIG};
 use crate::errors::CustomError;
 
 #[derive(Accounts)]

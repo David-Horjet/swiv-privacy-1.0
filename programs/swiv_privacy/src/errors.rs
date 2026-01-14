@@ -44,4 +44,6 @@ pub enum CustomError {
     CannotRefundRevealed,
     #[msg("Reveal window has expired. Please request a refund.")]
     RevealWindowExpired,
+    #[msg("Instruction has been removed in the Pool refactor.")]
+    InstructionDeprecated,
 }
