@@ -1,7 +1,6 @@
 use crate::errors::CustomError;
 use anchor_lang::prelude::*;
 
-// Precision for internal calculations (1_000_000 = 1.0)
 pub const MATH_PRECISION: u128 = 1_000_000; 
 
 // --- 1. ACCURACY SCORE (Linear Normalization) ---
@@ -13,7 +12,7 @@ pub fn calculate_accuracy_score(
     buffer: u64,
 ) -> Result<u64> {
     if buffer == 0 {
-        return Ok(0); // Safety against division by zero
+        return Ok(0); 
     }
 
     let diff = if prediction > result {
@@ -22,13 +21,9 @@ pub fn calculate_accuracy_score(
         result - prediction
     };
 
-    // If outside the buffer, accuracy is 0
     if diff >= buffer {
         return Ok(0);
     }
-
-    // Fraction of error = diff / buffer
-    // Score = 1.0 - Fraction
     
     let diff_u128 = diff as u128;
     let buffer_u128 = buffer as u128;

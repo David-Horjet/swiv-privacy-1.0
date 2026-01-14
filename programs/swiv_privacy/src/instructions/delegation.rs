@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use crate::state::{UserBet, FixedMarket};
+use crate::state::{UserBet, };
 use crate::constants::{SEED_BET, SEED_FIXED_MARKET};
 use crate::errors::CustomError;
 use ephemeral_rollups_sdk::anchor::{delegate, commit};
@@ -18,7 +18,7 @@ pub struct DelegateBet<'info> {
     pub user: Signer<'info>,
 
     #[account(
-        seeds = [SEED_FIXED_MARKET, user_bet.market_identifier.as_bytes()],
+        seeds = [SEED_POOL, user_bet.market_identifier.as_bytes()],
         bump
     )]
     pub fixed_market: Account<'info, FixedMarket>,

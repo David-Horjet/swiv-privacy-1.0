@@ -12,15 +12,12 @@ pub struct Pool {
     pub final_outcome: u64,
     pub resolution_ts: i64,
 
-    // Parimutuel state
     pub total_weight: u128,
     pub weight_finalized: bool,
 
-    // Payout accounting
     pub vault_balance: u64,
     pub locked_for_payouts: u64,
 
-    // Scoring config
     pub max_accuracy_buffer: u64,
     pub conviction_bonus_bps: u64,
 
@@ -28,6 +25,5 @@ pub struct Pool {
 }
 
 impl Pool {
-    // Approximate size
     pub const LEN: usize = 8 + 32 + 4 + 64 + 8 + 8 + 1 + 8 + 16 + 8 + 8 + 8 + 1 + 8;
 }
