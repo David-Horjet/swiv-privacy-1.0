@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
-use crate::state::{UserBet, FixedMarket};
-use crate::constants::{SEED_BET, SEED_FIXED_MARKET};
+use crate::state::{UserBet, Pool};
+use crate::constants::{SEED_BET};
 use crate::errors::CustomError;
 use ephemeral_rollups_sdk::anchor::{delegate, commit};
 use ephemeral_rollups_sdk::cpi::DelegateConfig;
@@ -18,17 +18,16 @@ pub struct DelegateBet<'info> {
     pub user: Signer<'info>,
 
     #[account(
-        seeds = [SEED_FIXED_MARKET, user_bet.market_identifier.as_bytes()],
-        bump
+        constraint = user_bet.pool == pool.key() @ CustomError::MarketMismatch
     )]
-    pub fixed_market: Account<'info, FixedMarket>,
+    pub pool: Account<'info, Pool>,
 
     #[account(
         mut,
         del,
         seeds = [
             SEED_BET, 
-            fixed_market.key().as_ref(), 
+            pool.key().as_ref(), 
             user.key().as_ref(), 
             request_id.as_bytes()
         ],
@@ -41,13 +40,13 @@ pub struct DelegateBet<'info> {
 
 pub fn delegate_bet(ctx: Context<DelegateBet>, request_id: String) -> Result<()> {
     // 1. Prepare Seeds for Signing (Since UserBet is a PDA)
-    let market_key = ctx.accounts.fixed_market.key();
+    let pool_key = ctx.accounts.pool.key();
     let user_key = ctx.accounts.user.key();
     let bump = ctx.accounts.user_bet.bump;
     
     let seeds = &[
         SEED_BET,
-        market_key.as_ref(),
+        pool_key.as_ref(),
         user_key.as_ref(),
         request_id.as_bytes(),
         &[bump],
@@ -79,16 +78,15 @@ pub struct UndelegateBet<'info> {
     pub user: Signer<'info>,
 
     #[account(
-        seeds = [SEED_FIXED_MARKET, user_bet.market_identifier.as_bytes()],
-        bump
+        constraint = user_bet.pool == pool.key() @ CustomError::MarketMismatch
     )]
-    pub fixed_market: Account<'info, FixedMarket>,
+    pub pool: Account<'info, Pool>,
 
     #[account(
         mut,
         seeds = [
             SEED_BET, 
-            fixed_market.key().as_ref(), 
+            pool.key().as_ref(), 
             user.key().as_ref(), 
             request_id.as_bytes()
         ],

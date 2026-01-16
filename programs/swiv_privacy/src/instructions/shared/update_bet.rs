@@ -1,8 +1,6 @@
 use anchor_lang::prelude::*;
-use crate::state::{UserBet, LiquidityVault, FixedMarket, MarketType, BetStatus, MarketMode};
-use crate::constants::{SEED_VAULT, SEED_FIXED_MARKET};
+use crate::state::{UserBet, Pool, BetStatus};
 use crate::errors::CustomError;
-use crate::utils::infinite_math::{calculate_time_decay_factor, calculate_max_potential_profit};
 use crate::events::BetUpdated;
 use crate::constants::PERMISSION_PROGRAM_ID;
 
@@ -20,19 +18,9 @@ pub struct UpdateBet<'info> {
 
     #[account(
         mut,
-        seeds = [SEED_VAULT, user_bet.market_identifier.as_bytes()],
-        bump = vault.bump,
-        constraint = user_bet.market_type == MarketType::Infinite
+        constraint = pool.key() == user_bet.pool @ CustomError::MarketMismatch
     )]
-    pub vault: Option<Box<Account<'info, LiquidityVault>>>,
-
-    #[account(
-        mut,
-        seeds = [SEED_FIXED_MARKET, user_bet.market_identifier.as_bytes()],
-        bump = fixed_market.bump,
-        constraint = user_bet.market_type == MarketType::Fixed
-    )]
-    pub fixed_market: Option<Box<Account<'info, FixedMarket>>>,
+    pub pool: Box<Account<'info, Pool>>,
 
     /// CHECK: Seeds verification for MagicBlock Group
     #[account(
@@ -67,64 +55,17 @@ pub fn update_bet(
     // 1. Verify Permission Data exists (User didn't bypass setup)
     require!(!ctx.accounts.permission.data_is_empty(), CustomError::Unauthorized);
 
-    // ====================================================
-    // 2. FIXED MARKET LOGIC
-    // ====================================================
-    if let Some(market) = &mut ctx.accounts.fixed_market {
-        require!(clock.unix_timestamp < market.end_time, CustomError::DurationTooShort);
+    // Timing Check - ensure pool still open
+    require!(clock.unix_timestamp < ctx.accounts.pool.end_time, CustomError::DurationTooShort);
 
-        user_bet.creation_ts = clock.unix_timestamp;
-        user_bet.update_count = user_bet.update_count.checked_add(1).unwrap();
+    user_bet.creation_ts = clock.unix_timestamp;
+    user_bet.update_count = user_bet.update_count.checked_add(1).unwrap();
 
-        if market.mode == MarketMode::House {
-            // Recalculate Multiplier based on Time Decay
-            let old_max_profit = calculate_max_potential_profit(user_bet.deposit, user_bet.payout_multiplier)?;
+    // Update Predictions
+    let old_low = user_bet.prediction_low;
+    let old_high = user_bet.prediction_high;
+    let old_target = user_bet.prediction_target;
 
-            let decay_factor = calculate_time_decay_factor(
-                market.start_time,
-                market.end_time,
-                clock.unix_timestamp
-            )?;
-
-            let mut new_multiplier = user_bet.payout_multiplier
-                .checked_mul(decay_factor).unwrap()
-                .checked_div(10_000).unwrap();
-
-            // Apply Conviction Penalty
-            let penalty_factor = 10_000u64.saturating_sub(market.conviction_bonus_bps);
-            new_multiplier = new_multiplier
-                .checked_mul(penalty_factor).unwrap()
-                .checked_div(10_000).unwrap();
-
-            user_bet.payout_multiplier = new_multiplier;
-            
-            // Adjust locked exposure in vault
-            let new_max_profit = calculate_max_potential_profit(user_bet.deposit, new_multiplier)?;
-            let exposure_reduction = old_max_profit.saturating_sub(new_max_profit);
-            market.locked_for_payouts = market.locked_for_payouts.saturating_sub(exposure_reduction);
-        }
-    }
-    // ====================================================
-    // 3. INFINITE MARKET LOGIC
-    // ====================================================
-    else if let Some(vault) = &mut ctx.accounts.vault {
-        // Simple halving logic for Infinite Market updates
-        let old_max_profit = calculate_max_potential_profit(user_bet.deposit, user_bet.payout_multiplier)?;
-
-        let new_multiplier = user_bet.payout_multiplier / 2;
-        user_bet.payout_multiplier = new_multiplier;
-
-        let new_max_profit = calculate_max_potential_profit(user_bet.deposit, new_multiplier)?;
-        let exposure_reduction = old_max_profit.saturating_sub(new_max_profit);
-        vault.total_exposure = vault.total_exposure.saturating_sub(exposure_reduction);
-
-        user_bet.creation_ts = clock.unix_timestamp;
-        user_bet.update_count += 1;
-    }
-
-    // ====================================================
-    // 4. UPDATE PREDICTIONS (Securely inside TEE)
-    // ====================================================
     user_bet.prediction_low = new_prediction_low;
     user_bet.prediction_high = new_prediction_high;
     user_bet.prediction_target = new_prediction_target;
@@ -134,8 +75,12 @@ pub fn update_bet(
     emit!(BetUpdated {
         bet_address: user_bet.key(),
         user: ctx.accounts.user.key(),
-        old_multiplier_bps: 0, 
-        new_multiplier_bps: user_bet.payout_multiplier,
+        old_low,
+        old_high,
+        old_target,
+        new_low: new_prediction_low,
+        new_high: new_prediction_high,
+        new_target: new_prediction_target,
     });
 
     Ok(())
