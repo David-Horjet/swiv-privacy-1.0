@@ -123,11 +123,4 @@ pub mod swiv_privacy {
         )
     }
 
-    // NEW: Refund Bet Instruction
-    pub fn refund_bet(ctx: Context<RefundBet>) -> Result<()> {
-        shared::refund_bet(ctx)
-    }
-
-
-
 }
