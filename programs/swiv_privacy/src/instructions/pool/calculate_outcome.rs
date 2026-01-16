@@ -14,6 +14,7 @@ pub struct CalculatePoolOutcome<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
+    /// CHECK: Owner of the bet being calculated
     pub bet_owner: UncheckedAccount<'info>,
 
     #[account(

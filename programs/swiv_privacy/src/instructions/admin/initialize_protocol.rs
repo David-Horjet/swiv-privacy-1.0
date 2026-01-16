@@ -20,6 +20,7 @@ pub struct InitializeProtocol<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
 
+    /// CHECK: Treasury wallet for protocol fees
     pub treasury_wallet: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
